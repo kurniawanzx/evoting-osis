@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
-import Candidate from '@/models/Candidate';
-import Student from '@/models/Student';
 
 export async function GET() {
+  // Skip database operations during build
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({
+      statistics: {
+        totalStudents: 0,
+        votedStudents: 0,
+        abstain: 0,
+        participationRate: 0
+      },
+      candidates: [],
+      classStats: [],
+      students: []
+    });
+  }
+
   try {
+    const { default: connectDB } = await import('@/lib/database');
+    const { default: Candidate } = await import('@/models/Candidate');
+    const { default: Student } = await import('@/models/Student');
+    
     await connectDB();
     
     const [candidates, students, totalStudents, votedStudents] = await Promise.all([

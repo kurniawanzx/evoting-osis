@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
-import Candidate from '@/models/Candidate';
 
 export async function GET() {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json([]);
+  }
+
   try {
+    const { default: connectDB } = await import('@/lib/database');
+    const { default: Candidate } = await import('@/models/Candidate');
+    
     await connectDB();
     const candidates = await Candidate.find().sort({ nomorUrut: 1 });
     return NextResponse.json(candidates);
@@ -16,7 +21,14 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ _id: 'build-time-mock' });
+  }
+
   try {
+    const { default: connectDB } = await import('@/lib/database');
+    const { default: Candidate } = await import('@/models/Candidate');
+    
     await connectDB();
     const data = await request.json();
     
@@ -24,9 +36,9 @@ export async function POST(request: NextRequest) {
     await candidate.save();
     
     return NextResponse.json(candidate);
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { error: 'Error creating candidate' },
+      { error: 'Error creating candidate: ' + error.message },
       { status: 500 }
     );
   }

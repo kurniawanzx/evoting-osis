@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
-import Student from '@/models/Student';
-import Candidate from '@/models/Candidate';
 
 export async function POST(request: NextRequest) {
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ 
+      success: true,
+      message: 'Vote recorded successfully'
+    });
+  }
+
   try {
+    const { default: connectDB } = await import('@/lib/database');
+    const { default: Student } = await import('@/models/Student');
+    const { default: Candidate } = await import('@/models/Candidate');
+    
     await connectDB();
     
     const { nis, candidateId } = await request.json();
     
-    // Check if student exists and hasn't voted
     const student = await Student.findOne({ nis });
     if (!student || student.hasVoted) {
       return NextResponse.json(
@@ -18,7 +25,6 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Get candidate
     const candidate = await Candidate.findById(candidateId);
     if (!candidate) {
       return NextResponse.json(
@@ -27,12 +33,10 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Update candidate vote count
     await Candidate.findByIdAndUpdate(candidateId, {
       $inc: { voteCount: 1 }
     });
     
-    // Mark student as voted
     await Student.findOneAndUpdate(
       { nis },
       { 

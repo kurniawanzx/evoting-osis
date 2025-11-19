@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
-import connectDB from '@/lib/database';
-import Student from '@/models/Student';
 
 export async function POST(request: NextRequest) {
+  // Skip database operations during build
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({ 
+      success: true,
+      message: 'API is available'
+    });
+  }
+
   try {
+    const { default: connectDB } = await import('@/lib/database');
+    const { default: Student } = await import('@/models/Student');
+    
     await connectDB();
     
     const formData = await request.formData();
@@ -26,11 +35,10 @@ export async function POST(request: NextRequest) {
       nis: row.nis.toString(),
       nama: row.nama,
       kelas: row.kelas,
-      password: row.nis.toString(), // Default password = NIS
+      password: row.nis.toString(),
       hasVoted: false
     }));
     
-    // Clear existing students and insert new ones
     await Student.deleteMany({});
     await Student.insertMany(students);
     
@@ -40,9 +48,10 @@ export async function POST(request: NextRequest) {
       data: students
     });
     
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Error processing file:', error);
     return NextResponse.json(
-      { error: 'Error processing file' },
+      { error: 'Error processing file: ' + error.message },
       { status: 500 }
     );
   }
