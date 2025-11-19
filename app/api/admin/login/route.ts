@@ -1,45 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-
-// Import model Admin dengan error handling
-let Admin;
-try {
-  Admin = require('@/models/Admin').default;
-  console.log('✅ Admin model loaded successfully');
-} catch (error) {
-  console.error('❌ Error loading Admin model:', error);
-}
+import Admin from '@/models/Admin';
 
 export async function POST(request: NextRequest) {
-  console.log('�� POST /api/admin/login called');
-  
   try {
-    // Test database connection first
-    console.log('🔗 Testing database connection...');
+    console.log('🔐 Admin login API called');
+    
     await connectDB();
     console.log('✅ Database connected successfully');
 
-    // Parse request body
-    console.log('📦 Parsing request body...');
-    const body = await request.json();
-    console.log('📧 Login data:', body);
+    const { username, password } = await request.json();
+    console.log('📧 Login attempt for username:', username);
     
-    const { username, password } = body;
-
     if (!username || !password) {
-      console.log('❌ Missing credentials');
       return NextResponse.json(
         { error: 'Username dan password harus diisi' },
         { status: 400 }
-      );
-    }
-
-    // Check if Admin model is available
-    if (!Admin) {
-      console.log('❌ Admin model not available');
-      return NextResponse.json(
-        { error: 'Admin model not available' },
-        { status: 500 }
       );
     }
 
@@ -50,15 +26,10 @@ export async function POST(request: NextRequest) {
       password: password 
     });
 
-    console.log('📊 Admin query result:', admin);
+    console.log('📊 Admin query result:', admin ? 'FOUND' : 'NOT FOUND');
 
     if (!admin) {
       console.log('❌ Admin not found or password incorrect');
-      
-      // List all admins for debugging
-      const allAdmins = await Admin.find({});
-      console.log('👥 All admins in database:', allAdmins);
-      
       return NextResponse.json(
         { error: 'Username atau password salah' },
         { status: 401 }
@@ -70,7 +41,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       admin: {
-        id: admin._id,
+        id: admin._id.toString(),
         username: admin.username,
         name: admin.name,
         role: admin.role
@@ -78,17 +49,9 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('💥 CRITICAL ERROR in login API:');
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    
+    console.error('💥 Login error:', error);
     return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        details: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
