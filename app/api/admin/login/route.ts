@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔐 Admin login API called');
     
+    // Test database connection
     await connectDB();
     console.log('✅ Database connected successfully');
 
@@ -30,6 +31,11 @@ export async function POST(request: NextRequest) {
 
     if (!admin) {
       console.log('❌ Admin not found or password incorrect');
+      
+      // Debug: List all admins
+      const allAdmins = await Admin.find({});
+      console.log('👥 All admins in database:', allAdmins);
+      
       return NextResponse.json(
         { error: 'Username atau password salah' },
         { status: 401 }
@@ -51,7 +57,10 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('💥 Login error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Database connection failed',
+        details: error.message
+      },
       { status: 500 }
     );
   }
