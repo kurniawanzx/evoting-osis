@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 
 export async function POST(request: NextRequest) {
-  // Skip database operations during build
   if (process.env.NEXT_PHASE === 'phase-production-build') {
     return NextResponse.json({ 
       success: true,
-      message: 'API is available'
+      message: 'API ready for production'
     });
   }
 
@@ -49,7 +48,6 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error processing file:', error);
     return NextResponse.json(
       { error: 'Error processing file: ' + error.message },
       { status: 500 }

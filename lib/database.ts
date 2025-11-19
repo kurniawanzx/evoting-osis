@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
+function getMongoDBURI(): string {
+  // Always return a valid URI for build time
+  // This will fail at runtime if the real MONGODB_URI is not set
+  return process.env.MONGODB_URI || 'mongodb://localhost:27017/evoting-osis-dummy';
 }
 
 interface GlobalMongoose {
@@ -22,11 +22,17 @@ if (!cached) {
 }
 
 async function connectDB() {
+  // For build time, don't actually connect
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return mongoose;
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
 
   if (!cached.promise) {
+    const MONGODB_URI = getMongoDBURI();
     const opts = {
       bufferCommands: false,
     };
@@ -36,7 +42,7 @@ async function connectDB() {
       console.log('✅ MongoDB connected successfully');
       return mongoose;
     }).catch((error) => {
-      console.error('❌ MongoDB connection failed:', error);
+      console.error('❌ MongoDB connection failed:', error.message);
       throw error;
     });
   }

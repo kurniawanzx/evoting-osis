@@ -1,17 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
-import Admin from '@/models/Admin';
 
 export async function POST(request: NextRequest) {
+  // For build time, return a mock response
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    return NextResponse.json({
+      success: true,
+      admin: {
+        id: 'build-time-mock',
+        username: 'kurniawan',
+        name: 'Kurniawan Admin',
+        role: 'superadmin'
+      }
+    });
+  }
+
   try {
-    console.log('🔐 Admin login API called');
+    const { default: connectDB } = await import('@/lib/database');
+    const { default: Admin } = await import('@/models/Admin');
     
-    // Test database connection
     await connectDB();
-    console.log('✅ Database connected successfully');
 
     const { username, password } = await request.json();
-    console.log('📧 Login attempt for username:', username);
     
     if (!username || !password) {
       return NextResponse.json(
@@ -20,29 +29,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cari admin di database
-    console.log('🔍 Searching for admin:', username);
     const admin = await Admin.findOne({ 
       username: username, 
       password: password 
     });
 
-    console.log('📊 Admin query result:', admin ? 'FOUND' : 'NOT FOUND');
-
     if (!admin) {
-      console.log('❌ Admin not found or password incorrect');
-      
-      // Debug: List all admins
-      const allAdmins = await Admin.find({});
-      console.log('👥 All admins in database:', allAdmins);
-      
       return NextResponse.json(
         { error: 'Username atau password salah' },
         { status: 401 }
       );
     }
-
-    console.log('✅ Login successful for:', admin.username);
     
     return NextResponse.json({
       success: true,
