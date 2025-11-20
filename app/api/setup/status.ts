@@ -26,6 +26,12 @@ export default async function handler(
 
       const isSetupCompleted = setupStatus?.value === true && missingCollections.length === 0
 
+      console.log('Database status check:', {
+        isSetupCompleted,
+        setupStatus: setupStatus?.value,
+        missingCollections
+      })
+
       res.status(200).json({
         success: true,
         data: {
@@ -36,7 +42,8 @@ export default async function handler(
             missing: missingCollections,
             required: requiredCollections
           },
-          lastSetup: setupStatus?.completedAt || null
+          lastSetup: setupStatus?.completedAt || null,
+          version: setupStatus?.version || 'not-set'
         }
       })
 

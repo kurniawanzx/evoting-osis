@@ -11,8 +11,8 @@ export default async function handler(
     try {
       const { db } = await connectToDatabase()
 
-      console.log('=== IMPORT DEBUG ===')
-      console.log('Request body:', req.body)
+      console.log('=== IMPORT STARTED ===')
+      console.log('Request body received')
       
       const { users, data, students } = req.body
       
@@ -20,14 +20,29 @@ export default async function handler(
       let userData = users || data || students || []
       
       console.log('Raw data length:', userData.length)
-      console.log('First item:', userData[0])
 
       if (!userData || !Array.isArray(userData) || userData.length === 0) {
         return res.status(400).json({
           success: false,
-          error: 'No valid student data found. Please check Excel format.'
+          error: 'Tidak ada data siswa yang ditemukan. Periksa format file Excel.'
         })
       }
+
+      console.log('First student sample:', userData[0])
+
+      // Skip setup check for now - uncomment later
+      /*
+      const setupStatus = await db.collection('settings').findOne({ 
+        key: 'database_setup' 
+      })
+
+      if (!setupStatus?.value) {
+        return res.status(400).json({
+          success: false,
+          error: 'Import feature will be available after database setup. Please complete database setup first.'
+        })
+      }
+      */
 
       const results: ImportResult = {
         success: true,
@@ -45,40 +60,40 @@ export default async function handler(
           const nama = studentData.nama || studentData.Nama || studentData.name || studentData.nama_lengkap || ''
           const kelas = studentData.kelas || studentData.Kelas || studentData.class || studentData.class_name || ''
           
-          console.log('Processing student:', { nis, nama, kelas })
+          console.log('Processing:', { nis, nama, kelas })
 
           // Validation - required fields
           if (!nis || !nama) {
             results.failed++
-            results.errors.push(`Missing NIS or Name: ${nis || 'unknown'}`)
+            results.errors.push(`Data tidak lengkap: NIS atau Nama kosong (${nis || 'unknown'})`)
             continue
           }
 
           // Check if student already exists
           const existingUser = await db.collection<User>('users').findOne({ 
             $or: [
-              { nis: nis.toString() },
-              { username: nis.toString() }
+              { nis: nis.toString().trim() },
+              { username: nis.toString().trim() }
             ] 
           })
 
           if (existingUser) {
             results.failed++
-            results.errors.push(`Student already exists: ${nama} (NIS: ${nis})`)
+            results.errors.push(`Siswa sudah terdaftar: ${nama} (NIS: ${nis})`)
             continue
           }
 
           // Hash password (using NIS as password)
-          const hashedPassword = await bcrypt.hash(nis.toString(), 12)
+          const hashedPassword = await bcrypt.hash(nis.toString().trim(), 12)
 
           // Create student user
           await db.collection<User>('users').insertOne({
-            nis: nis.toString(),
-            name: nama,
-            username: nis.toString(), // Username = NIS
-            email: `${nis}@school.com`, // Auto-generate email
+            nis: nis.toString().trim(),
+            name: nama.trim(),
+            username: nis.toString().trim(), // Username = NIS
+            email: `${nis.toString().trim()}@school.com`,
             password: hashedPassword, // Password = NIS (hashed)
-            class: kelas,
+            class: kelas.trim(),
             role: 'voter',
             isActive: true,
             createdAt: new Date(),
@@ -86,21 +101,20 @@ export default async function handler(
           } as any)
 
           results.imported++
-          console.log(`Imported: ${nama} (NIS: ${nis})`)
+          console.log(`✓ Imported: ${nama} (${nis})`)
 
         } catch (error: any) {
           results.failed++
-          results.errors.push(`Error processing ${studentData.nis}: ${error.message}`)
-          console.error(`Import error for ${studentData.nis}:`, error)
+          results.errors.push(`Error: ${studentData.nis} - ${error.message}`)
+          console.error(`✗ Import error for ${studentData.nis}:`, error)
         }
       }
 
       results.message = `Berhasil mengimport ${results.imported} siswa, ${results.failed} gagal`
       results.success = results.imported > 0
 
-      console.log('=== IMPORT RESULTS ===')
-      console.log('Imported:', results.imported)
-      console.log('Failed:', results.failed)
+      console.log('=== IMPORT COMPLETED ===')
+      console.log('Results:', results)
 
       res.status(results.imported > 0 ? 200 : 400).json({
         success: results.success,
@@ -109,10 +123,10 @@ export default async function handler(
       })
 
     } catch (error: any) {
-      console.error('Import error:', error)
+      console.error('Import system error:', error)
       res.status(500).json({
         success: false,
-        error: 'Import failed: ' + error.message
+        error: 'Sistem error: ' + error.message
       })
     }
   } else {
