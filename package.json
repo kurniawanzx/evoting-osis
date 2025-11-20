@@ -23,6 +23,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/mongodb": "^4.0.6",
     "@types/react": "19.2.6",
     "@types/xlsx": "^0.0.35",
     "eslint": "^8.0.0",
